@@ -57,7 +57,7 @@ The bot implements a trading strategy with the following conditions:
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/mexc-trading-bot.git
+git clone https://github.com/shaumne/trading-bot
 cd mexc-trading-bot
 ```
 

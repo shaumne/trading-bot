@@ -92,7 +92,7 @@ Edit the `src/config.py` file to customize trading parameters:
 To run backtesting on the last month of data:
 
 ```bash
-python -m src.main --backtest
+python .\src\main.py --backtest
 ```
 
 This will generate performance reports and charts for each timeframe.
@@ -102,7 +102,7 @@ This will generate performance reports and charts for each timeframe.
 To start live trading:
 
 ```bash
-python -m src.main --live
+python .\src\main.py --live
 ```
 
 **IMPORTANT**: Before running in live mode, make sure to:

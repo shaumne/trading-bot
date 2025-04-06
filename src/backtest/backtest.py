@@ -18,19 +18,22 @@ class Backtest:
     Backtesting module to evaluate trading strategies
     """
     
-    def __init__(self, data, initial_capital=10000, position_size=0.1):
+    def __init__(self, data, timeframe, initial_capital=10000, position_size=0.1):
         """
         Initialize the backtester
         
         Args:
             data: OHLCV data with indicators
+            timeframe: Timeframe for the data
             initial_capital: Initial capital amount
             position_size: Position size as a fraction of capital
         """
         self.data = data
-        self.initial_capital = initial_capital
+        self.timeframe = timeframe
+        self.initial_capital = float(initial_capital)  # Ensure it's a float
         self.position_size = position_size
         self.results = None
+        self.trades = []
         
     def run(self):
         """
@@ -73,9 +76,9 @@ class Backtest:
         # Initialize P&L columns
         data['pnl'] = 0.0
         data['cumulative_pnl'] = 0.0
-        data['equity'] = self.initial_capital
+        data['equity'] = float(self.initial_capital)
         data['drawdown'] = 0.0
-        data['max_equity'] = self.initial_capital
+        data['max_equity'] = float(self.initial_capital)
         
         # Initialize position tracking
         current_position = None
@@ -87,14 +90,14 @@ class Backtest:
         
         for idx in range(1, len(data)):
             # Check current position
-            if data['position'].iloc[idx-1] is None and data['position'].iloc[idx] is not None:
+            if pd.isna(data['position'].iloc[idx-1]) and not pd.isna(data['position'].iloc[idx]):
                 # New position opened
                 current_position = data['position'].iloc[idx]
                 entry_price = data['entry_price'].iloc[idx]
                 position_size = self.position_size * data['equity'].iloc[idx-1] / entry_price
             
             # Position closed or TP1 hit
-            if data['position'].iloc[idx] is not None and data['exit_price'].iloc[idx] > 0:
+            if not pd.isna(data['position'].iloc[idx]) and data['exit_price'].iloc[idx] > 0:
                 # Calculate P&L
                 exit_price = data['exit_price'].iloc[idx]
                 exit_reason = data['exit_reason'].iloc[idx]
@@ -105,7 +108,7 @@ class Backtest:
                     pnl = position_size * (entry_price - exit_price)
                 
                 # Record P&L
-                data.loc[data.index[idx], 'pnl'] = pnl
+                data.loc[data.index[idx], 'pnl'] = float(pnl)
                 
                 # Record trade
                 trade = {
@@ -125,7 +128,7 @@ class Backtest:
                 entry_price = 0
             
             # TP1 hit (partial exit)
-            elif data['position'].iloc[idx] is not None and data['tp1_hit'].iloc[idx]:
+            elif not pd.isna(data['position'].iloc[idx]) and data['tp1_hit'].iloc[idx]:
                 # Calculate P&L for partial exit (50%)
                 take_profit1 = data['take_profit1'].iloc[idx]
                 
@@ -135,7 +138,7 @@ class Backtest:
                     pnl = (position_size * 0.5) * (entry_price - take_profit1)
                 
                 # Record P&L
-                data.loc[data.index[idx], 'pnl'] = pnl
+                data.loc[data.index[idx], 'pnl'] = float(pnl)
                 
                 # Reduce position size by 50%
                 position_size *= 0.5
@@ -153,12 +156,13 @@ class Backtest:
                 trades.append(trade)
             
             # Calculate cumulative P&L and equity
-            data.loc[data.index[idx], 'cumulative_pnl'] = data['pnl'].iloc[:idx+1].sum()
-            data.loc[data.index[idx], 'equity'] = self.initial_capital + data.loc[data.index[idx], 'cumulative_pnl']
+            data.loc[data.index[idx], 'cumulative_pnl'] = float(data['pnl'].iloc[:idx+1].sum())
+            data.loc[data.index[idx], 'equity'] = float(self.initial_capital) + float(data.loc[data.index[idx], 'cumulative_pnl'])
             
             # Calculate maximum equity and drawdown
-            data.loc[data.index[idx], 'max_equity'] = max(data['equity'].iloc[:idx+1].max(), data['max_equity'].iloc[idx-1])
-            data.loc[data.index[idx], 'drawdown'] = (data['max_equity'].iloc[idx] - data['equity'].iloc[idx]) / data['max_equity'].iloc[idx] * 100
+            data.loc[data.index[idx], 'max_equity'] = float(max(data['equity'].iloc[:idx+1].max(), data['max_equity'].iloc[idx-1]))
+            drawdown_pct = (data['max_equity'].iloc[idx] - data['equity'].iloc[idx]) / data['max_equity'].iloc[idx] * 100 if data['max_equity'].iloc[idx] > 0 else 0
+            data.loc[data.index[idx], 'drawdown'] = float(drawdown_pct)
         
         # Store trades
         self.trades = trades
@@ -385,7 +389,7 @@ def run_backtest(data, timeframe, plot=True):
     logger.info(f"Starting backtest for {SYMBOL} on {timeframe} timeframe")
     
     # Initialize backtest
-    backtest = Backtest(data.copy())
+    backtest = Backtest(data.copy(), timeframe)
     
     # Run backtest
     results = backtest.run()

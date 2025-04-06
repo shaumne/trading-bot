@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import logging
-from src.config import (
+from ..config import (
     VWAP_PERIOD,
     EMA_FAST,
     EMA_SLOW,

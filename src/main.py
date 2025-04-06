@@ -5,13 +5,18 @@ import time
 import argparse
 from datetime import datetime, timedelta
 import pandas as pd
+from dotenv import load_dotenv
+
+# Add parent directory to Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.mexc_api import MexcAPI
 from src.indicators.technical import TechnicalIndicators
 from src.trading.strategy import TradingStrategy, Position
 from src.trading.risk_management import RiskManagement
-from src.backtest.backtest import run_backtest
+from src.backtest.backtest import Backtest
 from src.config import SYMBOL, TIMEFRAMES, QUANTITY, TEST_MODE
+# from src.config import SYMBOL, TIMEFRAMES, QUANTITY, TEST_MODE
 
 # Configure logging
 logging.basicConfig(
@@ -61,7 +66,14 @@ def backtest_strategy():
         logger.info(f"Running backtest on {len(historical_data)} candles for {timeframe} timeframe")
         
         # Run backtest
-        backtest = run_backtest(historical_data, timeframe)
+        backtest = Backtest(historical_data, timeframe)
+        results = backtest.run()
+        
+        # Generate report
+        backtest.print_report()
+        
+        # Plot results
+        backtest.plot_results(f"backtest_results_{timeframe}.png")
 
 def live_trade():
     """Run the live trading bot"""

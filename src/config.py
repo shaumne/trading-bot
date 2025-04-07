@@ -17,21 +17,29 @@ TEST_MODE = True  # Set to False for live trading
 # Technical Analysis Parameters
 VWAP_PERIOD = 14  # Period for VWAP calculation
 RSI_PERIOD = 14
-RSI_OVERBOUGHT = 70
-RSI_OVERSOLD = 30
+RSI_OVERBOUGHT = 75  # Artırıldı (70'ten)
+RSI_OVERSOLD = 25    # Azaltıldı (30'dan)
 MACD_FAST = 12
 MACD_SLOW = 26
 MACD_SIGNAL = 9
 EMA_FAST = 9
-EMA_SLOW = 21
+EMA_SLOW = 25  # 21'den 25'e değiştirildi
+EMA_TREND = 50  # Trend EMA'sı eklendi
 ATR_PERIOD = 14
 
 # Risk Management Parameters
-STOP_LOSS_ATR_MULTIPLIER = 1.5
-TAKE_PROFIT1_ATR_MULTIPLIER = 2.0  # First take profit level
-TAKE_PROFIT2_ATR_MULTIPLIER = 3.5  # Second take profit level
+STOP_LOSS_ATR_MULTIPLIER = 2.0  # 1.5'tan 2.0'a artırıldı
+TAKE_PROFIT1_ATR_MULTIPLIER = 1.5  # 2.0'dan 1.5'e azaltıldı
+TAKE_PROFIT2_ATR_MULTIPLIER = 3.0  # 3.5'tan 3.0'a azaltıldı
 MAX_POSITION_SIZE = 0.01  # Maximum position size in BTC
 MAX_DAILY_LOSS = 0.02  # Maximum daily loss as percentage of account balance
+
+# Timeframe önceliği
+PRIMARY_TIMEFRAME = '15m'  # 15 dakikalık timeframe'i öncelikli olarak belirle
+
+# Kelly Kriterine göre risk ayarları
+MAX_RISK_PER_TRADE = 0.02  # Her trade için maksimum sermaye riski %2
+WIN_RATE_ESTIMATE = 0.55   # Tahmini kazanma oranı
 
 # Logging Configuration
 LOG_LEVEL = 'INFO'

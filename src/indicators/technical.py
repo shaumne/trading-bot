@@ -9,7 +9,8 @@ from ..config import (
     MACD_SLOW,
     MACD_SIGNAL,
     RSI_PERIOD,
-    ATR_PERIOD
+    ATR_PERIOD,
+    EMA_TREND
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -150,6 +151,7 @@ class TechnicalIndicators:
         # Calculate EMAs
         data['ema_fast'] = TechnicalIndicators.calculate_ema(data, EMA_FAST)
         data['ema_slow'] = TechnicalIndicators.calculate_ema(data, EMA_SLOW)
+        data['ema_trend'] = TechnicalIndicators.calculate_ema(data, EMA_TREND)
         
         # Calculate VWAP
         data['vwap'] = TechnicalIndicators.calculate_vwap(data)

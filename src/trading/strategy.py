@@ -20,10 +20,12 @@ class TradingStrategy:
     @staticmethod
     def check_long_condition_1(data, idx):
         """
-        Check LONG Condition 1:
+        Check LONG Condition 1 (İyileştirilmiş):
         - Price is above VWAP (bullish bias)
-        - EMA 9 crosses above EMA 21 (bullish crossover)
+        - Price is above EMA50 (trend confirmation)
+        - EMA 9 crosses above EMA 25 (bullish crossover)
         - MACD line crosses above Signal line (bullish momentum shift)
+        - RSI > 40 (not oversold)
         """
         if idx < 1:
             return False
@@ -31,7 +33,10 @@ class TradingStrategy:
         # Price above VWAP
         price_above_vwap = data['close'].iloc[idx] > data['vwap'].iloc[idx]
         
-        # EMA 9 crosses above EMA 21
+        # Price above trend EMA
+        price_above_trend = data['close'].iloc[idx] > data['ema_trend'].iloc[idx]
+        
+        # EMA 9 crosses above EMA 25
         ema_crossover = (data['ema_fast'].iloc[idx-1] <= data['ema_slow'].iloc[idx-1] and 
                          data['ema_fast'].iloc[idx] > data['ema_slow'].iloc[idx])
         
@@ -39,8 +44,11 @@ class TradingStrategy:
         macd_crossover = (data['macd'].iloc[idx-1] <= data['macd_signal'].iloc[idx-1] and 
                          data['macd'].iloc[idx] > data['macd_signal'].iloc[idx])
         
+        # RSI condition
+        rsi_condition = data['rsi'].iloc[idx] > 40
+        
         # All conditions must be met
-        return price_above_vwap and ema_crossover and macd_crossover
+        return price_above_vwap and price_above_trend and ema_crossover and macd_crossover and rsi_condition
     
     @staticmethod
     def check_long_condition_2(data, idx):

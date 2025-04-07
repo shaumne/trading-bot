@@ -4,7 +4,8 @@ import logging
 from src.config import (
     STOP_LOSS_ATR_MULTIPLIER,
     TAKE_PROFIT1_ATR_MULTIPLIER,
-    TAKE_PROFIT2_ATR_MULTIPLIER
+    TAKE_PROFIT2_ATR_MULTIPLIER,
+    WIN_RATE_ESTIMATE
 )
 from src.trading.strategy import Position
 
@@ -276,3 +277,27 @@ class RiskManagement:
                     logger.info(f"SHORT position closed (STRATEGY EXIT) at {data.index[idx]} - Price: {current_price}")
         
         return data
+
+    @staticmethod
+    def dynamic_position_sizing(capital, entry_price, stop_loss_price, max_risk):
+        """
+        Calculate position size based on risk per trade
+        Using Kelly-inspired position sizing
+        """
+        risk_per_unit = abs(entry_price - stop_loss_price)
+        if risk_per_unit == 0:
+            return 0
+        
+        capital_at_risk = capital * max_risk
+        position_size = capital_at_risk / risk_per_unit
+        
+        # Apply Kelly criterion 
+        kelly_factor = WIN_RATE_ESTIMATE - ((1 - WIN_RATE_ESTIMATE) / ((entry_price - stop_loss_price) / stop_loss_price))
+        
+        # Use half-Kelly for safety
+        half_kelly = max(0, kelly_factor * 0.5)
+        
+        # Adjust position size by Kelly factor
+        position_size = position_size * half_kelly
+        
+        return position_size

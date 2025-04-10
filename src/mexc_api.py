@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from src.config import MEXC_API_KEY, MEXC_API_SECRET, TEST_MODE
+from email_notifier import send_order_notification
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('mexc_api')
@@ -130,35 +131,62 @@ class MexcAPI:
             logger.error("Failed to retrieve account information")
             return None
     
-    def place_order(self, symbol, order_type, side, amount, price=None):
-        """Place an order"""
-        if self.test_mode:
-            logger.info(f"Test mode: Placing {side} {order_type} order for {amount} {symbol}" + (f" at {price}" if price else ""))
-            return {"orderId": "test-order-" + str(int(time.time()))}
+    def place_order(self, symbol, side, order_type, quantity, price=None, stop_price=None):
+        """
+        Place an order on MEXC
+        
+        Args:
+            symbol (str): Trading pair symbol (e.g., 'BTC/USDT')
+            side (str): Order side ('BUY' or 'SELL')
+            order_type (str): Order type ('LIMIT', 'MARKET', etc.)
+            quantity (float): Order quantity
+            price (float, optional): Order price for limit orders
+            stop_price (float, optional): Stop price for stop orders
             
-        endpoint = "/api/v3/order"
-        params = {
-            "symbol": symbol,
-            "side": side.upper(),
-            "quantity": amount,
-            "timestamp": int(time.time() * 1000)
-        }
-        
-        if order_type.lower() == "limit":
-            params["type"] = "LIMIT"
-            params["price"] = price
-            params["timeInForce"] = "GTC"
-        else:
-            params["type"] = "MARKET"
-        
-        response = self._make_request("POST", endpoint, params, auth=True)
-        
-        if response:
-            logger.info(f"Order placed successfully: {response['orderId']}")
-            return response
-        else:
-            logger.error("Failed to place order")
-            return None
+        Returns:
+            dict: Order response from MEXC
+        """
+        try:
+            # Prepare order parameters
+            params = {
+                'symbol': symbol.replace('/', ''),
+                'side': side,
+                'type': order_type,
+                'quantity': quantity
+            }
+            
+            if price:
+                params['price'] = price
+                
+            if stop_price:
+                params['stopPrice'] = stop_price
+                
+            # Add timestamp and signature
+            params['timestamp'] = int(time.time() * 1000)
+            params['signature'] = self._generate_signature(params)
+            
+            # Send order
+            response = self._make_request("POST", "/api/v3/order", params, auth=True)
+            
+            order_response = response
+            
+            # Send email notification
+            order_details = {
+                'symbol': symbol,
+                'side': side,
+                'type': order_type,
+                'quantity': quantity,
+                'price': price,
+                'status': order_response.get('status', 'N/A'),
+                'orderId': order_response.get('orderId', 'N/A')
+            }
+            send_order_notification(order_details)
+            
+            return order_response
+            
+        except Exception as e:
+            logger.error(f"Error placing order: {str(e)}")
+            raise
     
     def get_order_status(self, symbol, order_id):
         """Get order status"""

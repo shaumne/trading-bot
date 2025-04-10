@@ -54,3 +54,11 @@ LOG_FILE = 'trading_bot.log'
 BACKTEST_START_DATE = '2024-01-01'
 BACKTEST_END_DATE = '2024-02-01'
 INITIAL_BALANCE = 10000  # Initial balance in USDT
+
+# Email Configuration
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USERNAME = 'your_email@gmail.com'  # Replace with your email
+EMAIL_PASSWORD = 'your_app_password'      # Replace with your app password
+EMAIL_RECIPIENT = 'aoraya@gmail.com'      # Recipient email
+EMAIL_USE_TLS = True

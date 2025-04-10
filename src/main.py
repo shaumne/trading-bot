@@ -11,12 +11,12 @@ from dotenv import load_dotenv
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.mexc_api import MexcAPI
+from src.binance_api import BinanceAPI
 from src.indicators.technical import TechnicalIndicators
 from src.trading.strategy import TradingStrategy, Position
 from src.trading.risk_management import RiskManagement
 from src.backtest.backtest import Backtest
-from src.config import SYMBOL, TIMEFRAMES, QUANTITY, TEST_MODE
-# from src.config import SYMBOL, TIMEFRAMES, QUANTITY, TEST_MODE
+from src.config import SYMBOL, TIMEFRAMES, QUANTITY, TEST_MODE, EXCHANGE
 
 # Configure logging
 logging.basicConfig(
@@ -36,11 +36,23 @@ def create_env_file():
             f.write("# MEXC API Credentials\n")
             f.write("MEXC_API_KEY=your_api_key_here\n")
             f.write("MEXC_API_SECRET=your_api_secret_here\n")
+            f.write("\n# Binance Testnet API Credentials\n")
+            f.write("BINANCE_TESTNET_API_KEY=your_binance_testnet_api_key_here\n")
+            f.write("BINANCE_TESTNET_SECRET_KEY=your_binance_testnet_secret_key_here\n")
         logger.info("Created example .env file. Please edit it with your API credentials.")
+
+def get_exchange():
+    """Get the appropriate exchange API instance based on configuration"""
+    if EXCHANGE == 'binance':
+        return BinanceAPI()
+    elif EXCHANGE == 'mexc':
+        return MexcAPI()
+    else:
+        raise ValueError(f"Unsupported exchange: {EXCHANGE}")
 
 def backtest_strategy():
     """Run backtesting on historical data"""
-    mexc = MexcAPI()
+    exchange = get_exchange()
     
     for timeframe in TIMEFRAMES:
         logger.info(f"Fetching historical data for {SYMBOL} on {timeframe} timeframe")
@@ -57,7 +69,7 @@ def backtest_strategy():
         else:
             limit = 1000  # Default
             
-        historical_data = mexc.get_historical_data(SYMBOL, timeframe, limit=limit)
+        historical_data = exchange.get_historical_data(SYMBOL, timeframe, limit=limit)
         
         if historical_data is None or len(historical_data) == 0:
             logger.error(f"Failed to retrieve historical data for {SYMBOL} on {timeframe} timeframe")
@@ -82,7 +94,7 @@ def live_trade():
     else:
         logger.warning("Running in LIVE mode - REAL orders will be executed")
     
-    mexc = MexcAPI()
+    exchange = get_exchange()
     
     # Track current positions and orders
     current_position = Position.NEUTRAL
@@ -93,19 +105,47 @@ def live_trade():
     take_profit2 = 0
     entry_price = 0
     
-    logger.info(f"Starting live trading for {SYMBOL}")
+    # Track last processed time for each timeframe
+    last_processed_time = {tf: None for tf in TIMEFRAMES}
+    
+    # Track last candle time for each timeframe
+    last_candle_time = {tf: None for tf in TIMEFRAMES}
+    
+    logger.info(f"Starting live trading for {SYMBOL} on {EXCHANGE}")
     
     try:
         while True:
+            current_time = datetime.now()
+            
             for timeframe in TIMEFRAMES:
+                # Calculate the time difference in minutes
+                if last_processed_time[timeframe]:
+                    time_diff = (current_time - last_processed_time[timeframe]).total_seconds() / 60
+                    
+                    # Skip if not enough time has passed for this timeframe
+                    if timeframe == '5m' and time_diff < 5:
+                        continue
+                    elif timeframe == '15m' and time_diff < 15:
+                        continue
+                
                 logger.info(f"Processing {timeframe} timeframe")
                 
                 # Get latest candles
-                candles = mexc.get_historical_data(SYMBOL, timeframe, limit=100)
+                candles = exchange.get_historical_data(SYMBOL, timeframe, limit=100)
                 
                 if candles is None or len(candles) == 0:
                     logger.error(f"Failed to retrieve candles for {SYMBOL} on {timeframe} timeframe")
                     continue
+                
+                # Check if we have new data
+                latest_candle_time = candles.index[-1]
+                if last_candle_time[timeframe] and latest_candle_time <= last_candle_time[timeframe]:
+                    logger.info(f"No new data available for {timeframe} timeframe")
+                    continue
+                
+                # Update last processed time and last candle time
+                last_processed_time[timeframe] = current_time
+                last_candle_time[timeframe] = latest_candle_time
                 
                 # Add indicators
                 data = TechnicalIndicators.add_indicators(candles)
@@ -132,7 +172,7 @@ def live_trade():
                         take_profit1, take_profit2 = RiskManagement.calculate_take_profit_levels(current_price, atr, Position.LONG)
                         
                         # Place market order
-                        order = mexc.place_order(
+                        order = exchange.create_order(
                             symbol=SYMBOL,
                             order_type='market',
                             side='buy',
@@ -156,7 +196,7 @@ def live_trade():
                         take_profit1, take_profit2 = RiskManagement.calculate_take_profit_levels(current_price, atr, Position.SHORT)
                         
                         # Place market order
-                        order = mexc.place_order(
+                        order = exchange.create_order(
                             symbol=SYMBOL,
                             order_type='market',
                             side='sell',
@@ -187,7 +227,7 @@ def live_trade():
                         exit_reason = "STOP_LOSS" if sl_hit else ("TAKE_PROFIT2" if tp2_hit else "STRATEGY_EXIT")
                         
                         # Place market sell order
-                        order = mexc.place_order(
+                        order = exchange.create_order(
                             symbol=SYMBOL,
                             order_type='market',
                             side='sell',
@@ -201,7 +241,7 @@ def live_trade():
                     # Partial take profit
                     elif tp1_hit:
                         # Sell half position
-                        order = mexc.place_order(
+                        order = exchange.create_order(
                             symbol=SYMBOL,
                             order_type='market',
                             side='sell',
@@ -228,7 +268,7 @@ def live_trade():
                         exit_reason = "STOP_LOSS" if sl_hit else ("TAKE_PROFIT2" if tp2_hit else "STRATEGY_EXIT")
                         
                         # Place market buy order (to cover short)
-                        order = mexc.place_order(
+                        order = exchange.create_order(
                             symbol=SYMBOL,
                             order_type='market',
                             side='buy',
@@ -242,7 +282,7 @@ def live_trade():
                     # Partial take profit
                     elif tp1_hit:
                         # Buy half position (to cover half of short)
-                        order = mexc.place_order(
+                        order = exchange.create_order(
                             symbol=SYMBOL,
                             order_type='market',
                             side='buy',
@@ -253,10 +293,8 @@ def live_trade():
                             tp1_executed = True
                             logger.info(f"Partial exit (TP1) of SHORT position at {current_price}")
             
-            # Wait for next iteration
-            logger.info("Waiting for next cycle...")
-            time.sleep(60)  # Check every minute
-            
+            # Sleep for a short time to avoid rate limiting
+            time.sleep(1)
     except KeyboardInterrupt:
         logger.info("Trading bot stopped by user")
     except Exception as e:
@@ -264,21 +302,25 @@ def live_trade():
         raise
 
 def main():
-    """Main entry point for the application"""
-    parser = argparse.ArgumentParser(description='MEXC Trading Bot')
-    parser.add_argument('--backtest', action='store_true', help='Run backtesting')
-    parser.add_argument('--live', action='store_true', help='Run live trading')
+    """Main entry point for the trading bot"""
+    global EXCHANGE  # Move global declaration to the top
     
+    parser = argparse.ArgumentParser(description='Crypto Trading Bot')
+    parser.add_argument('--mode', choices=['backtest', 'live'], default='live',
+                      help='Run mode: backtest or live trading')
+    parser.add_argument('--exchange', choices=['mexc', 'binance'], default=EXCHANGE,
+                      help='Exchange to use: mexc or binance')
     args = parser.parse_args()
     
-    create_env_file()
+    # Update exchange selection if provided via command line
+    if args.exchange != EXCHANGE:
+        EXCHANGE = args.exchange
+        logger.info(f"Using exchange: {EXCHANGE}")
     
-    if args.backtest:
+    if args.mode == 'backtest':
         backtest_strategy()
-    elif args.live:
-        live_trade()
     else:
-        parser.print_help()
+        live_trade()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

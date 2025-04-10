@@ -7,6 +7,11 @@ load_dotenv()
 # API Configuration
 MEXC_API_KEY = os.getenv('MEXC_API_KEY')
 MEXC_API_SECRET = os.getenv('MEXC_API_SECRET')
+BINANCE_TESTNET_API_KEY = os.getenv('BINANCE_TESTNET_API_KEY')
+BINANCE_TESTNET_SECRET_KEY = os.getenv('BINANCE_TESTNET_SECRET_KEY')
+
+# Exchange Selection
+EXCHANGE = 'binance'  # Options: 'mexc' or 'binance'
 
 # Trading Configuration
 SYMBOL = 'BTCUSDT'  # Trading pair

@@ -1,15 +1,18 @@
 # MEXC Trading Bot
 
-A cryptocurrency trading bot for MEXC Exchange that implements automated trading strategies based on technical indicators.
+A cryptocurrency trading bot for MEXC Exchange that implements automated trading strategies based on technical indicators. The bot also supports Binance testnet for testing and development purposes.
 
 ## Features
 
 - Automated trading on MEXC Exchange
+- Binance testnet integration for testing
 - Technical indicators: VWAP, EMA, MACD, RSI, ATR
 - Multiple trading conditions for LONG and SHORT positions
 - Stop loss and take profit management
 - Backtesting capabilities
 - Support for multiple timeframes (5m, 15m)
+- Real-time data processing with time management
+- Testnet data simulation with random noise
 
 ## Trading Strategy
 
@@ -67,11 +70,16 @@ cd mexc-trading-bot
 pip install -r requirements.txt
 ```
 
-3. Create a `.env` file in the project directory with your MEXC API credentials:
+3. Create a `.env` file in the project directory with your API credentials:
 
 ```
-MEXC_API_KEY=your_api_key_here
-MEXC_API_SECRET=your_api_secret_here
+# MEXC API Credentials
+MEXC_API_KEY=your_mexc_api_key_here
+MEXC_API_SECRET=your_mexc_api_secret_here
+
+# Binance API Credentials (for testnet)
+BINANCE_API_KEY=your_binance_api_key_here
+BINANCE_API_SECRET=your_binance_api_secret_here
 ```
 
 ## Configuration
@@ -82,6 +90,7 @@ Edit the `src/config.py` file to customize trading parameters:
 - `TIMEFRAMES`: Timeframes to trade on (default: ['5m', '15m'])
 - `QUANTITY`: Trading quantity in BTC (default: 0.001)
 - `TEST_MODE`: Test mode without actual trading (default: True, set to False for real trading)
+- `USE_BINANCE_TESTNET`: Use Binance testnet for testing (default: True)
 - Technical indicator parameters (VWAP, EMA, RSI, MACD, ATR periods)
 - Risk management parameters (stop loss and take profit multipliers)
 
@@ -109,6 +118,17 @@ python .\src\main.py --live
 1. Set up proper API keys with trading permissions in your `.env` file
 2. Set `TEST_MODE = False` in `src/config.py` when you are ready for real trading
 3. Adjust `QUANTITY` to an appropriate value based on your account balance
+4. If using Binance testnet, ensure `USE_BINANCE_TESTNET = True` in `src/config.py`
+
+## Testnet Features
+
+The bot includes special features for testnet operation:
+
+- Fixed 24-hour time window for testnet data
+- Chronological data sorting
+- Random noise addition to simulate real-time data
+- Time management for each timeframe
+- Prevention of duplicate data processing
 
 ## Disclaimer
 
